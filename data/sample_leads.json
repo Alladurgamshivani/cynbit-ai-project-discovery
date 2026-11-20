@@ -1,0 +1,18 @@
+[
+  {
+    "id": "L001",
+    "inquiry": "We are a healthcare company looking for a multilingual AI chatbot for our website. It should answer common patient questions and integrate with our existing website. Budget is around INR 200000. We hope to launch in 2 months."
+  },
+  {
+    "id": "L002",
+    "inquiry": "We need to redesign our company website and make it mobile friendly. We have not finalized the budget or timeline yet."
+  },
+  {
+    "id": "L003",
+    "inquiry": "Our finance team manually extracts information from invoices. We want an AI solution that reads PDF invoices, extracts vendor, invoice number, date and total, and exports the data to our ERP. Budget 5 lakh. Delivery in 3 months."
+  },
+  {
+    "id": "L004",
+    "inquiry": "We need a mobile application for tenants to view rent dues and submit maintenance requests. It should connect to our property management backend."
+  }
+]
