@@ -1,147 +1,165 @@
 # Technical Approach Report
-## AI-Powered Project Discovery and Lead Qualification Assistant
+
+**AI-Powered Project Discovery and Lead Qualification Assistant**  
+**Cynbit AI/ML Engineer Intern Technical Assessment**
 
 ## 1. Objective
 
-Build a working prototype that accepts a customer project inquiry and returns structured project information, missing requirements, recommended service, an explainable priority score and a discovery brief.
+This report describes the design and implementation approach for the AI Project Discovery and Lead Qualification Assistant. The application accepts a customer project enquiry and produces a structured summary, identifies missing information, recommends a service category and prepares follow-up questions.
 
-## 2. Architecture
+The proof of concept also includes a follow-up chat feature. After the initial analysis, a customer can ask additional questions about the same project. The assistant uses the original enquiry and the generated analysis as context.
 
-```text
-Customer inquiry
-      |
-      v
-Streamlit user interface
-      |
-      v
-FastAPI endpoint (optional API mode)
-      |
-      v
-Input validation (Pydantic)
-      |
-      v
-Requirement extraction
-  |               |
-  |               +--> Optional Groq LLM enrichment
-  |
-  +--> Deterministic extraction fallback
-      |
-      v
-Rule-based lead scoring
-      |
-      v
-Service recommendation + missing fields
-      |
-      v
-Structured JSON response
-      |
-      v
-Discovery summary and downloadable result
-```
+## 2. System overview
 
-## 3. Technology Choices
+The application has a Streamlit user interface, Python analysis logic and a FastAPI endpoint. The analysis logic first creates a deterministic baseline result. If a Groq API key is configured, an LLM can enrich selected fields and produce a more natural project brief. The lead-priority score remains rule-based.
 
-| Layer | Technology | Reason |
-|---|---|---|
-| Language | Python | Rapid prototyping and broad ML ecosystem |
-| UI | Streamlit | Fast interactive demo |
-| API | FastAPI | Typed request/response API and OpenAPI docs |
-| Validation | Pydantic | Structured input and schema validation |
-| LLM | Groq API (optional) | Low-latency hosted inference for enrichment |
-| Baseline NLP | Python rules and regular expressions | Transparent fallback and no-key demo |
-| Tests | pytest | Repeatable functional checks |
+The main flow is:
 
-The app works without an API key using deterministic extraction. If `GROQ_API_KEY` is configured, optional LLM enrichment is attempted. The score remains rule-based in this PoC.
+1. Customer enquiry
+2. Streamlit interface
+3. Input validation
+4. Requirement extraction and classification
+5. Optional Groq LLM enrichment
+6. Rule-based priority score
+7. Missing-information and follow-up question generation
+8. Project discovery brief
+9. Results shown to the user
 
-## 4. Data Pipeline
+For the follow-up conversation, the application passes the original enquiry, analysis result and recent conversation turns to the conversation function. The response is shown in the same project session.
 
-1. Receive the customer inquiry.
-2. Validate input length and type.
-3. Identify industry and project type.
-4. Extract budget and timeline when present.
-5. Detect requirements and integrations.
-6. Identify missing information.
-7. Calculate an explainable score.
-8. Generate follow-up questions and project brief.
-9. Return a JSON result to the UI.
+## 3. Technology choices
 
-The sample data is synthetic and must not be interpreted as actual Cynbit customer data.
+- **Python** is used for the main application logic because it supports rapid development and has libraries for APIs, data validation and language-model integration.
+- **Streamlit** provides the user interface. It was selected because it allows the proof of concept to be demonstrated without building a separate frontend application.
+- **FastAPI** provides an API endpoint for analysis and a separate endpoint for follow-up questions. This keeps the processing logic accessible to other applications if the prototype is extended later.
+- **Pydantic** validates incoming API data and helps keep request structures consistent.
+- **Groq** is used as an optional hosted LLM provider. It can help interpret varied customer language and produce structured or conversational responses. The application also has a deterministic fallback so that basic functionality can be demonstrated without an API key.
+- **Regular expressions and keyword rules** are used for baseline extraction of budget, timeline, industry, requirements and service category. These rules are simple and transparent, but they will not handle every possible way a customer can express a requirement.
+- **Pytest** is used for basic automated tests of the analysis logic.
 
-## 5. Prompt Engineering
+## 4. Data pipeline
 
-The prompt:
-- Defines the model as a project discovery assistant.
-- Treats customer input as untrusted data.
-- Requires evidence-grounded extraction.
-- Prohibits invented budget, timelines and integrations.
-- Separates extracted facts from recommendations.
-- Requests missing information and follow-up questions.
-- Restricts recommendations to a known service taxonomy.
+The analysis pipeline follows these steps:
 
-Temperature is set low to encourage consistent extraction. Structured JSON output is requested. Production should enforce a formal schema and retry/repair strategy for malformed responses.
+**Step 1: Receive the enquiry.** The customer enters a project description in the Streamlit interface or sends it to the API.
 
-## 6. Lead Scoring
+**Step 2: Validate the input.** The application checks that the enquiry is present and meets the configured length limits.
 
-The PoC uses a transparent heuristic score out of 100:
-- Clear business need: 20 points.
-- Budget provided: 20 points.
-- Timeline provided: 15 points.
-- Requirements clarity: up to 25 points.
-- Integration or delivery detail: 10 points.
-- Business context: 10 points.
+**Step 3: Extract information.** The baseline logic looks for industry terms, project indicators, budget patterns, timeline expressions, requirements and integration references.
 
-The score indicates inquiry completeness and apparent readiness for discovery. It is not a probability of conversion and is not trained on historical data.
+**Step 4: Classify the request.** The application selects a likely project or service category based on the terms found in the enquiry.
 
-## 7. Evaluation Plan
+**Step 5: Identify missing information.** The application checks whether key details such as budget, timeline, industry and integration needs have been provided.
 
-Use a human-labelled test set of representative inquiries.
+**Step 6: Calculate the score.** The rule-based scoring function assigns points according to the criteria described in this report.
 
-Metrics:
-- Field extraction precision, recall and F1.
-- Industry classification accuracy.
-- Project/service classification accuracy.
-- Missing-field detection precision and recall.
-- Human rating of follow-up question usefulness.
-- Median analysis latency.
-- Failure rate and cost per inquiry.
+**Step 7: Prepare the response.** The application creates follow-up questions and a project discovery brief and returns the result as structured data.
 
-For a future conversion prediction model, collect approved historical lead records with outcomes, define a time-based train/test split, compare a simple logistic regression baseline with tree-based models, calibrate probabilities and monitor drift. Do not train until data volume, quality, consent and label definitions are adequate.
+**Step 8: Continue the conversation.** The customer can ask a follow-up question. The assistant receives the original enquiry and analysis so that it can answer in the context of that project.
 
-## 8. Security and Responsible AI
+The sample enquiries included in the repository are synthetic examples. They are not Cynbit customer records.
 
-- Keep API keys in environment variables.
-- Never commit `.env` or customer data.
-- Avoid storing inquiries by default.
-- Minimize personal and sensitive data.
-- Treat inquiry text as untrusted input.
-- Require human review before contacting customers or issuing quotes.
-- Apply rate limits, authentication and logging controls before public production deployment.
+## 5. Model and extraction approach
 
-## 9. Execution Plan
+The proof of concept uses a hybrid approach rather than relying entirely on a language model.
 
-**Phase 1 — PoC:** Streamlit UI, FastAPI endpoint, deterministic extraction, optional LLM enrichment and sample cases.
+The deterministic baseline handles straightforward patterns such as common budget formats, timeline expressions and known requirement keywords. It is useful for repeatable behavior and provides a fallback when the external model is unavailable.
 
-**Phase 2 — Pilot:** Obtain approved anonymized inquiries, define labels with sales stakeholders, evaluate extraction and scoring.
+The optional Groq LLM enrichment is intended for cases where natural language is less predictable. The prompt asks the model to identify project type, industry, requirements, follow-up questions and a project brief. It also instructs the model not to invent facts that are absent from the enquiry.
 
-**Phase 3 — Integration:** Connect CRM, add role-based access, audit logs and human feedback.
+The follow-up assistant uses the original enquiry, structured analysis and recent conversation history. Its instructions require it to distinguish confirmed details from suggestions. If the answer is not supported by the context, it should say that the project team needs to confirm it.
 
-**Phase 4 — Production:** Deploy securely, monitor latency/cost/errors, review bias and periodically recalibrate rules or models.
+The current system does not train a new machine-learning model. It also does not predict the probability that a lead will become a customer. The priority score is calculated using explicit rules.
 
-## 10. Limitations
+## 6. Prompt design
 
-- No private Cynbit CRM data was available.
-- Sample inquiries are synthetic.
-- Budget and timeline extraction uses simple patterns and may miss unusual formats.
-- Service classification uses keyword matching in the baseline.
-- The score is heuristic, not predictive.
-- LLM enrichment quality depends on model availability and output correctness.
-- Production readiness requires security, privacy, integration and user acceptance testing.
+The prompt is designed around a few requirements:
 
-## 11. Conclusion
+- The assistant acts as a project discovery assistant.
+- Customer text is treated as untrusted input data.
+- Only details stated or reasonably supported by the enquiry should be extracted.
+- Missing budget, timeline or integration information should remain marked as missing.
+- Recommendations must be separated from facts supplied by the customer.
+- The output should be concise and useful to a project or sales team.
+- The assistant must not promise a price, delivery date or technical capability without confirmation.
 
-The prototype demonstrates an end-to-end technical approach while clearly separating deterministic scoring from optional LLM-assisted extraction. It provides a practical foundation for a measured pilot, rather than claiming unvalidated production performance.
+For the follow-up chat, the prompt includes the original enquiry and analysis result. Recent messages are included to maintain conversational continuity. The assistant is instructed to ask for clarification when the context does not contain enough information to answer.
 
+The LLM output should be checked before it is used in a business workflow. In a production version, a formal response schema, validation and retry handling should be added around model output.
 
-## 12. Context-aware follow-up conversation
+## 7. Lead-priority scoring
 
-After analysis, the customer can ask questions about their project in a chat interface. Each answer receives the original inquiry, generated analysis and recent conversation turns. The system prompt requires evidence-grounded responses, prohibits invented pricing and delivery promises, and asks for clarification when the context is insufficient. Groq is used when configured; a limited deterministic fallback is available without an API key. The prototype stores chat turns only in Streamlit session state and does not persist them.
+The current scoring method is rule-based and uses a maximum of 100 points.
+
+| Criterion | Maximum points |
+|---|---:|
+| Clear business need | 20 |
+| Budget provided | 20 |
+| Timeline provided | 15 |
+| Requirements clarity | 25 |
+| Integration or delivery detail | 10 |
+| Business context | 10 |
+| **Total** | **100** |
+
+The current bands are High (70-100), Medium (40-69) and Low (0-39). The score is an indication of enquiry completeness under the selected rules. It is not a probability of conversion.
+
+The weights are illustrative and have not been calibrated using Cynbit's historical sales data. They should be reviewed with the business team and changed if the pilot shows that they do not help staff prioritize work.
+
+## 8. Evaluation plan
+
+The initial tests check that the analysis function returns expected fields for sample enquiries, identifies missing information and rejects very short input. These tests check basic functionality; they do not establish model accuracy.
+
+A more complete evaluation should use a representative set of enquiries that has been approved for testing and anonymized where necessary. Human reviewers should label the correct industry, project type, budget, timeline, requirements and missing details.
+
+The following measures can then be calculated:
+
+- Precision, recall and F1 for extracted fields.
+- Accuracy for industry and service classification.
+- Precision and recall for missing-information detection.
+- Human ratings for the relevance of follow-up questions.
+- Average and median response time.
+- Error rate and cost per enquiry.
+
+The evaluation should include different writing styles, short enquiries, incomplete enquiries, spelling mistakes and requests that do not fit the service categories.
+
+## 9. Security and responsible use
+
+API credentials should be stored in environment variables or a deployment secret manager. They must not be committed to GitHub.
+
+The prototype does not need to store customer enquiries in a database. For a pilot, data collection and retention should be agreed with the company first. Personal and confidential details should be minimized or removed from test data.
+
+Customer input must not be allowed to override the assistant's system instructions. The assistant should not send messages, make quotations or commit to delivery dates without human approval.
+
+Before production use, the API should have authentication, rate limiting, appropriate logging, access controls and monitoring. Error messages should not expose credentials or private customer information.
+
+## 10. Execution plan
+
+**Phase 1 - Proof of concept:**  
+Build the Streamlit interface, analysis logic, FastAPI endpoints, sample enquiries, optional LLM enrichment and follow-up chat. Confirm that the main user flow works locally.
+
+**Phase 2 - Evaluation:**  
+Prepare an approved and anonymized test set. Ask reviewers to label expected outputs. Measure extraction and classification quality and review the usefulness of the generated questions.
+
+**Phase 3 - Pilot integration:**  
+Discuss the workflow with relevant Cynbit team members. If appropriate, connect the application to a CRM using approved APIs. Add human review and feedback capture.
+
+**Phase 4 - Production preparation:**  
+Add authentication, rate limits, monitoring, error handling, data retention controls and deployment configuration. Reassess scoring rules and model behavior using pilot feedback.
+
+## 11. Current limitations
+
+- The prototype has not been evaluated on Cynbit's private customer enquiries.
+- Sample data is synthetic.
+- Keyword and regular-expression extraction can miss unusual wording and formats.
+- LLM responses depend on provider availability and model behavior.
+- The score is heuristic and is not trained on conversion outcomes.
+- The follow-up assistant may need human clarification when project information is incomplete.
+- The current application is a proof of concept, not a production-ready sales system.
+
+## 12. Conclusion
+
+The prototype demonstrates how an AI-assisted workflow can organize a customer enquiry, highlight missing project details and support follow-up questions using the same project context.
+
+The hybrid design keeps basic extraction and scoring transparent while allowing an LLM to handle more flexible language.
+
+The next step is to evaluate the system on an approved dataset and review the workflow with business users before considering CRM integration or production deployment.
